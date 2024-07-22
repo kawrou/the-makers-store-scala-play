@@ -22,7 +22,9 @@ class UserControllerSpec extends PlaySpec with GuiceOneAppPerTest with Injecting
   "UserController POST /signUp" should {
 
     "create a new user" in {
+      //Inject an instance of UserDao to our controller
       val userDAO = inject[UserDAO]
+      //Uses something called stubControllerComponents() from Play
       val userController = new UserController(stubControllerComponents(), userDAO)(inject[ExecutionContext])
 
       val request = FakeRequest(POST, "/signUp")
@@ -51,6 +53,9 @@ class UserControllerSpec extends PlaySpec with GuiceOneAppPerTest with Injecting
     //1. We could return an error when creating a User object.
     //2. We could return an error when addUser()
     //3. Check that the received JSON contains necessary fields before even instantiating the User object
+
+    //Email should match this: .+@example\.com
+    //Password: [0-9a-fA-F]{4,8}
     "return bad request for invalid data" in {
       val userDAO = inject[UserDAO]
       val userController = new UserController(stubControllerComponents(), userDAO)(inject[ExecutionContext])
@@ -64,7 +69,6 @@ class UserControllerSpec extends PlaySpec with GuiceOneAppPerTest with Injecting
         .withCSRFToken
 
       val result = call(userController.signUp, request)
-
       status(result) mustBe BAD_REQUEST
     }
   }

@@ -16,17 +16,17 @@ class UserController @Inject()(cc: ControllerComponents, userDAO: UserDAO)(impli
   val userForm: Form[User] = Form(
     mapping(
       "id" -> optional(longNumber),
-      "username" -> nonEmptyText,
+      "username" -> nonEmptyText(minLength = 3, maxLength = 20),
       "email" -> email,
       "password" -> nonEmptyText
     )(User.apply)(User.unapply)
   )
 
-  def showSignUpForm = Action { implicit request: Request[AnyContent] =>
+  def showSignUpForm: Action[AnyContent] = Action { implicit request: Request[AnyContent] =>
     Ok(views.html.signup(""))
   }
 
-  def signUp = Action.async(parse.json) { implicit request =>
+  def signUp: Action[JsValue] = Action.async(parse.json) { implicit request =>
     // Retrieve the data from the JSON
     // Get the username, email, and password
     val json = request.body.as[JsObject]
@@ -34,28 +34,29 @@ class UserController @Inject()(cc: ControllerComponents, userDAO: UserDAO)(impli
     val email = (json \ "email").as[String]
     val password = (json \ "password").as[String]
 
-    if (username.isEmpty || email.isEmpty || password.isEmpty) {
-      Future.successful(BadRequest(Json.obj("status" -> "error", "message" -> "Invalid Input Data")))
-    } else {
-      // Use that data to create a new user object
-      val user = User(None, username, email, password)
-
-      // Doing something with the DAO, I suspect its related to slick and how it communicates with the DB
-      // Call the addUser method and then map the result? using the 'Created' method from the Play framework
-      // IDE says Created does "Generates a ‘201 CREATED’ result."
-      // .recover seems similar to the 'catch' block found in other languages
-      // uses "case _" to match anything "throwable" from the "future" and sends it to the InternalServerError
-      // "InternalServerError" seems to be a method from the Play framework
-      // IDE says "Generates a ‘500 INTERNAL_SERVER_ERROR’ result."
-      userDAO.addUser(user).map { id =>
-        Created(Json.obj("status" -> "success", "message" -> s"User $id created"))
-      }.recover {
-        case _ => InternalServerError(Json.obj("status" -> "error", "message" -> "User could not be created"))
-      }
-    }
+    userForm.bindFromRequest()
+      .fold(
+        formWithErrors => {
+          // binding failure, you retrieve the form containing errors:
+          //    You can't use "Future.failed()" in this block because it returns a Future[Throwable]
+          //    which is not the same type expected by the .recover{} below.
+          //    This happens because if/else blocks must return the same data type.
+          Future.successful(BadRequest(Json.obj("status" -> "error", "message" -> "Missing Sign-up data")))
+        },
+        userData => {
+          /* binding success, you get the actual value. */
+          val user = User(None, username, email, password)
+          userDAO.addUser(user).map { id =>
+            Created(Json.obj("status" -> "success", "message" -> s"User $id created"))
+          }.recover {
+            case e: IllegalArgumentException => BadRequest(Json.obj("status" -> "error", "message" -> s"${e.getMessage}"))
+            case _ => InternalServerError(Json.obj("status" -> "error", "message" -> "User could not be created"))
+          }
+        }
+      )
   }
 
-  def logIn = Action.async(parse.json) { implicit request =>
+  def logIn: Action[JsValue] = Action.async(parse.json) { implicit request =>
     (request.body \ "username").asOpt[String].zip((request.body \ "password").asOpt[String]).map {
       case (username, password) =>
         userDAO.findUserByUsername(username).map {
