@@ -14,7 +14,15 @@ class UserDAO @Inject()(dbConfigProvider: DatabaseConfigProvider)(implicit ec: E
   import dbConfig._
   import profile.api._
 
+  //Gets all the users from the DB
   val users = Users.table
+
+  //Method returns a Future which I guess is like Promise
+  //It uses the password property of the user to hash pw with Bcrypt
+  //Then creates a new user instance shallow copy using Scala's .copy method
+  //Replaces the password property value with the new hashed password.
+  //Uses slick's run() method to add the new user to the Table
+  //It adds to the user table by first retrieving all the users and then mapping with +=
 
   def addUser(user: User): Future[Long] = {
     val hashedPassword = BCrypt.hashpw(user.password, BCrypt.gensalt())
