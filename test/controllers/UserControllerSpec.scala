@@ -46,6 +46,11 @@ class UserControllerSpec extends PlaySpec with GuiceOneAppPerTest with Injecting
       maybeUser.get.email mustBe "test@example.com"
     }
 
+    //In order to trigger the .recover block, we need to throw some error in the addUser() method or the "Created".
+    //We don't have control over Created, so we only have control of the userDao file and the User model.
+    //1. We could return an error when creating a User object.
+    //2. We could return an error when addUser()
+    //3. Check that the received JSON contains necessary fields before even instantiating the User object
     "return bad request for invalid data" in {
       val userDAO = inject[UserDAO]
       val userController = new UserController(stubControllerComponents(), userDAO)(inject[ExecutionContext])
