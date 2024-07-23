@@ -8,17 +8,23 @@ import scala.concurrent.{ExecutionContext, Future}
 import play.api.libs.json._
 import play.api.data._
 import play.api.data.Forms._
+//Need to import Constraints to use Constraints
+import play.api.data.validation.Constraints._
 import org.mindrot.jbcrypt.BCrypt
 
 @Singleton
 class UserController @Inject()(cc: ControllerComponents, userDAO: UserDAO)(implicit ec: ExecutionContext) extends AbstractController(cc) {
 
-  val userForm: Form[User] = Form(
+  private val passwordRegex = """^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,}$""".r
+
+  private val userForm: Form[User] = Form(
     mapping(
       "id" -> optional(longNumber),
       "username" -> nonEmptyText(minLength = 3, maxLength = 20),
       "email" -> email,
-      "password" -> nonEmptyText
+      "password" -> nonEmptyText(minLength = 8).verifying(
+        pattern(passwordRegex, error = "Password must contain at least one letter and one number"
+      ))
     )(User.apply)(User.unapply)
   )
 

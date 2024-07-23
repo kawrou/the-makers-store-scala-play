@@ -31,7 +31,7 @@ class UserControllerSpec extends PlaySpec with GuiceOneAppPerTest with Injecting
         .withJsonBody(Json.obj(
           "username" -> "testuser",
           "email" -> "test@example.com",
-          "password" -> "password")
+          "password" -> "Password1")
         )
         .withCSRFToken
 
