@@ -2,11 +2,13 @@ package controllers
 
 import daos.UserDAO
 import models.Users
+import org.scalatest.BeforeAndAfterEach
 import org.scalatestplus.play._
 import org.scalatestplus.play.guice._
+import play.api.Application
 import play.api.Play.materializer
+import play.api.db.evolutions.Evolutions
 import play.api.db.slick.DatabaseConfigProvider
-import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.libs.json.Json
 import play.api.test.CSRFTokenHelper.CSRFRequest
 import play.api.test.Helpers._
@@ -14,10 +16,33 @@ import play.api.test._
 import slick.jdbc.JdbcProfile
 import slick.lifted
 import slick.lifted.TableQuery
+import play.api.db.{DBApi, Database}
+import play.api.inject.Injector
+import play.api.inject.guice.GuiceApplicationBuilder
+import play.api.{Play, Application}
 
 import scala.concurrent.ExecutionContext
 
-class UserControllerSpec extends PlaySpec with GuiceOneAppPerTest with Injecting {
+
+class UserControllerSpec extends PlaySpec with GuiceOneAppPerTest with Injecting with BeforeAndAfterEach {
+
+  // WithApplication - Play Framework utility to manage application lifecycle during testing. Fresh app instance for
+  // each test and running the evolutions
+  // Play Evolutions - Scripts that manage database schema changes.
+  // Slick - Database query and access library.
+
+    def fakeApp(): Application = new GuiceApplicationBuilder().build()
+    lazy val database: Database = fakeApp().injector.instanceOf[DBApi].database("default")
+
+    override def beforeEach(): Unit = {
+//      Evolutions.cleanupEvolutions(database)
+      Evolutions.applyEvolutions(database)
+    }
+
+    override def afterEach(): Unit = {
+       Evolutions.cleanupEvolutions(database)
+      // can put cleanup in here instead but kept in beforeEach so table structure is kept in db
+    }
 
   "UserController POST /signUp" should {
 
