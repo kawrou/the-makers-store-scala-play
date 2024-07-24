@@ -62,15 +62,18 @@ class UserController @Inject()(cc: ControllerComponents, userDAO: UserDAO)(impli
       )
   }
 
-  //showLogInForm: -> Returns a log in form view (Need to add view in the views directory)
   //Need to test with E2E testing
+  def showLogInForm: Action[AnyContent] = Action{ implicit request: Request[AnyContent] =>
+    Ok(views.html.login(""))
+  }
 
+  //Need to return with sessions
   def logIn: Action[JsValue] = Action.async(parse.json) { implicit request =>
     (request.body \ "username").asOpt[String].zip((request.body \ "password").asOpt[String]).map {
       case (username, password) =>
         userDAO.findUserByUsername(username).map {
           case Some(user) if BCrypt.checkpw(password, user.password) =>
-            Ok(Json.obj("status" -> "success", "message" -> "Logged in"))
+            Ok(Json.obj("status" -> "success", "message" -> "Logged in")).withSession("username" -> username)
           case _ => Unauthorized(Json.obj("status" -> "error", "message" -> "Invalid credentials"))
         }
     }.getOrElse(Future.successful(BadRequest("Invalid login data")))
