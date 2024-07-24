@@ -101,7 +101,7 @@ class UserControllerSpec extends PlaySpec with GuiceOneAppPerSuite with Injectin
   //Or we can use beforeAll and afterAll so that data from the previous test can be used
   //Or we just create a user within the test and then test logIn
   "User Controller POST / logIn" should {
-    "return success" when {
+    "return success and sessions" when {
       "user credentials are correct" in {
         val userDAO = inject[UserDAO]
         val userController = new UserController(stubControllerComponents(), userDAO)(inject[ExecutionContext])
@@ -122,15 +122,16 @@ class UserControllerSpec extends PlaySpec with GuiceOneAppPerSuite with Injectin
           .withCSRFToken
 
         val signUpResult = call(userController.signUp, signUpRequest)
-
         status(signUpResult) mustBe CREATED
 
         val result = call(userController.logIn, logInRequest)
-
         status(result) mustBe OK
         val jsonResponse = contentAsJson(result)
         (jsonResponse \ "status").as[String] mustBe "success"
         (jsonResponse \ "message").as[String] must include("Logged in")
+
+        val resultSession = session(result)
+        resultSession.get("username") mustBe Some("testuser")
       }
     }
     "return error" when {
@@ -154,11 +155,9 @@ class UserControllerSpec extends PlaySpec with GuiceOneAppPerSuite with Injectin
           .withCSRFToken
 
         val signUpResult = call(userController.signUp, signUpRequest)
-
         status(signUpResult) mustBe CREATED
 
         val result = call(userController.logIn, logInRequest)
-
         status(result) mustBe UNAUTHORIZED
         val jsonResponse = contentAsJson(result)
         (jsonResponse \ "status").as[String] mustBe "error"
@@ -186,13 +185,25 @@ class UserControllerSpec extends PlaySpec with GuiceOneAppPerSuite with Injectin
           .withCSRFToken
 
         val signUpResult = call(userController.signUp, signUpRequest)
-
         status(signUpResult) mustBe CREATED
 
         val result = call(userController.logIn, logInRequest)
-
         status(result) mustBe BAD_REQUEST
       }
     }
+  }
+
+  "User Controller POST / showLogInForm" should {
+    "return log in form view" in {
+      val userDAO = inject[UserDAO]
+      val userController = new UserController(stubControllerComponents(), userDAO)(inject[ExecutionContext])
+
+      val request = FakeRequest(GET, "/login").withCSRFToken
+
+      val result = call(userController.showLogInForm, request)
+      status(result) mustBe OK
+      contentAsString(result) must include("name=\"csrfToken\"")
+    }
+
   }
 }

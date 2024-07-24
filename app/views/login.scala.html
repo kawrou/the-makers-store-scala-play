@@ -1,0 +1,53 @@
+@(message: String)(implicit request: RequestHeader)
+
+@import helper._
+
+@main("Log In") {
+    <h1>Log In</h1>
+
+    @if(message.nonEmpty) {
+        <div>@message</div>
+    }
+
+    <form id="log-in-form" method="post">
+        @CSRF.formField
+        <div>
+            <label for="username">Username</label>
+            <input type="text" id="username" name="username">
+        </div>
+        <div>
+            <label for="password">Password</label>
+            <input type="password" id="password" name="password">
+        </div>
+        <button type="submit">Sign Up</button>
+    </form>
+
+    <script type="text/javascript">
+        document.getElementById('log-in-form').addEventListener('submit', function(event) {
+            event.preventDefault(); // Prevent the default form submission
+
+            const formData = new FormData(event.target);
+            const data = Object.fromEntries(formData.entries());
+
+            fetch('@routes.UserController.logIn().absoluteURL()', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Csrf-Token': formData.get('csrfToken')
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    window.location.href = '/'; // Redirect on success
+                } else {
+                    alert('Error: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+        });
+    </script>
+}
