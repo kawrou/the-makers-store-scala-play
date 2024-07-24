@@ -13,7 +13,9 @@ libraryDependencies ++= Seq(
   "org.playframework" %% "play-slick-evolutions" % "6.1.0",
   "org.postgresql" % "postgresql" % "42.5.1", // PostgreSQL driver
   "org.mindrot" % "jbcrypt" % "0.4",
-  "org.scalatestplus.play" %% "scalatestplus-play" % "7.0.1" % Test
+  "org.scalatestplus.play" %% "scalatestplus-play" % "7.0.1" % Test,
+  "org.seleniumhq.selenium" % "selenium-java" % "4.1.0",
+  "org.seleniumhq.selenium" % "selenium-chrome-driver" % "4.22.0" % Test,
 )
 
 // Set the config.file system property for tests

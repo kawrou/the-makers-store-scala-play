@@ -9,7 +9,7 @@ GET     /signup                     controllers.UserController.showSignUpForm()
 POST    /signup                     controllers.UserController.signUp()
 GET     /login                      controllers.UserController.showLogInForm()
 POST    /login                      controllers.UserController.logIn()
-
+GET     /items                      controllers.ItemsController.index()
 
 # Map static resources from the /public folder to the /assets URL path
 GET     /assets/*file               controllers.Assets.versioned(path="/public", file: Asset)

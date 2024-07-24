@@ -3,7 +3,7 @@
 @import helper._
 
 @main("Sign Up") {
-    <h1>Sign Up</h1>
+    <h2>Sign up for an account</h2>
 
     @if(message.nonEmpty) {
         <div>@message</div>
@@ -44,7 +44,7 @@
             .then(response => response.json())
             .then(data => {
                 if (data.status === 'success') {
-                    window.location.href = '/'; // Redirect on success
+                    window.location.href = '/login'; // Redirect on success
                 } else {
                     alert('Error: ' + data.message);
                 }
