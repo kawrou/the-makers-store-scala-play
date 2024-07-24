@@ -22,7 +22,7 @@ import play.api.db.{DBApi, Database}
 import scala.concurrent.ExecutionContext
 
 
-class UserControllerSpec extends PlaySpec with GuiceOneAppPerTest with Injecting with BeforeAndAfterEach {
+class UserControllerSpec extends PlaySpec with GuiceOneAppPerSuite with Injecting with BeforeAndAfterEach {
 
   // WithApplication - Play Framework utility to manage application lifecycle during testing. Fresh app instance for
   // each test and running the evolutions
@@ -94,6 +94,105 @@ class UserControllerSpec extends PlaySpec with GuiceOneAppPerTest with Injecting
 
       val result = call(userController.signUp, request)
       status(result) mustBe BAD_REQUEST
+    }
+  }
+
+  //Might need to update the 1.sql Evolution to add user data for testing
+  //Or we can use beforeAll and afterAll so that data from the previous test can be used
+  //Or we just create a user within the test and then test logIn
+  "User Controller POST / logIn" should {
+    "return success" when {
+      "user credentials are correct" in {
+        val userDAO = inject[UserDAO]
+        val userController = new UserController(stubControllerComponents(), userDAO)(inject[ExecutionContext])
+
+        val signUpRequest = FakeRequest(POST, "/signUp")
+          .withJsonBody(Json.obj(
+            "username" -> "testuser",
+            "email" -> "test@example.com",
+            "password" -> "Password1")
+          )
+          .withCSRFToken
+
+        val logInRequest = FakeRequest(POST, "/logIn")
+          .withJsonBody(Json.obj(
+            "username" -> "testuser",
+            "password" -> "Password1")
+          )
+          .withCSRFToken
+
+        val signUpResult = call(userController.signUp, signUpRequest)
+
+        status(signUpResult) mustBe CREATED
+
+        val result = call(userController.logIn, logInRequest)
+
+        status(result) mustBe OK
+        val jsonResponse = contentAsJson(result)
+        (jsonResponse \ "status").as[String] mustBe "success"
+        (jsonResponse \ "message").as[String] must include("Logged in")
+      }
+    }
+    "return error" when {
+      "user credentials are wrong" in {
+        val userDAO = inject[UserDAO]
+        val userController = new UserController(stubControllerComponents(), userDAO)(inject[ExecutionContext])
+
+        val signUpRequest = FakeRequest(POST, "/signUp")
+          .withJsonBody(Json.obj(
+            "username" -> "testuser",
+            "email" -> "test@example.com",
+            "password" -> "Password1")
+          )
+          .withCSRFToken
+
+        val logInRequest = FakeRequest(POST, "/logIn")
+          .withJsonBody(Json.obj(
+            "username" -> "testuser",
+            "password" -> "Password2")
+          )
+          .withCSRFToken
+
+        val signUpResult = call(userController.signUp, signUpRequest)
+
+        status(signUpResult) mustBe CREATED
+
+        val result = call(userController.logIn, logInRequest)
+
+        status(result) mustBe UNAUTHORIZED
+        val jsonResponse = contentAsJson(result)
+        (jsonResponse \ "status").as[String] mustBe "error"
+        (jsonResponse \ "message").as[String] must include("Invalid credentials")
+      }
+    }
+    "return bad request" when {
+      "user credentials contain invalid types" in {
+        val userDAO = inject[UserDAO]
+        val userController = new UserController(stubControllerComponents(), userDAO)(inject[ExecutionContext])
+
+        val signUpRequest = FakeRequest(POST, "/signUp")
+          .withJsonBody(Json.obj(
+            "username" -> "testuser",
+            "email" -> "test@example.com",
+            "password" -> "Password1")
+          )
+          .withCSRFToken
+
+        val logInRequest = FakeRequest(POST, "/logIn")
+          .withJsonBody(Json.obj(
+            "username" -> "testuser2",
+            "password" -> 1)
+          )
+          .withCSRFToken
+
+        val signUpResult = call(userController.signUp, signUpRequest)
+
+        status(signUpResult) mustBe CREATED
+
+        val result = call(userController.logIn, logInRequest)
+
+        status(result) mustBe BAD_REQUEST
+      }
     }
   }
 }

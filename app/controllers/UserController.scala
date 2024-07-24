@@ -62,6 +62,9 @@ class UserController @Inject()(cc: ControllerComponents, userDAO: UserDAO)(impli
       )
   }
 
+  //showLogInForm: -> Returns a log in form view (Need to add view in the views directory)
+  //Need to test with E2E testing
+
   def logIn: Action[JsValue] = Action.async(parse.json) { implicit request =>
     (request.body \ "username").asOpt[String].zip((request.body \ "password").asOpt[String]).map {
       case (username, password) =>
