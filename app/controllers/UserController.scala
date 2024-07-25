@@ -63,19 +63,25 @@ class UserController @Inject()(cc: ControllerComponents, userDAO: UserDAO)(impli
   }
 
   //Need to test with E2E testing
-  def showLogInForm: Action[AnyContent] = Action{ implicit request: Request[AnyContent] =>
-    Ok(views.html.login(""))
+  def showLogInForm(error: String = ""): Action[AnyContent] = Action{ implicit request: Request[AnyContent] =>
+//    val errorMessage = error.getOrElse("")
+    Ok(views.html.login("", error))
   }
 
   //Need to return with sessions
   def logIn: Action[JsValue] = Action.async(parse.json) { implicit request =>
     (request.body \ "username").asOpt[String].zip((request.body \ "password").asOpt[String]).map {
       case (username, password) =>
-        userDAO.findUserByUsername(username).map {
+        userDAO.findUserByUsername(username).flatMap {
           case Some(user) if BCrypt.checkpw(password, user.password) =>
-            Ok(Json.obj("status" -> "success", "message" -> "Logged in")).withSession("username" -> username)
-          case _ => Unauthorized(Json.obj("status" -> "error", "message" -> "Invalid credentials"))
+            Future.successful(Ok(Json.obj("status" -> "success", "message" -> "Logged in")).withSession("username" -> username))
+          case _ => Future.successful(Unauthorized(Json.obj("status" -> "error", "message" -> "Invalid credentials")))
         }
-    }.getOrElse(Future.successful(BadRequest("Invalid login data")))
+    }.getOrElse(Future.successful(BadRequest(Json.obj("status" -> "error", "message" -> "Invalid login data"))))
   }
 }
+
+//When dealing with asynchronous code, a future value will eventually hold either Some(user) or None.
+//The 'map' method on a 'Future' is used to transform the result of the 'Future' when it completes successfully.
+//However, 'map' doesn't handle nested Futures properly which can lead to Future[Future[Result]] rather than
+//Future[Result].

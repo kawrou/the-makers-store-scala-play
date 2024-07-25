@@ -1,4 +1,4 @@
-@(message: String)(implicit request: RequestHeader)
+@(message: String, error: String)(implicit request: RequestHeader)
 
 @import helper._
 
@@ -13,16 +13,20 @@
         @CSRF.formField
         <div>
             <label for="username">Username</label>
-            <input type="text" id="username" name="username">
+            <input type="text" id="username" name="username" placeholder="Enter Username" required>
         </div>
         <div>
             <label for="password">Password</label>
-            <input type="password" id="password" name="password">
+            <input type="password" id="password" name="password" placeholder="Enter Password" required>
         </div>
         <button type="submit" id="login-button">Log In</button>
     </form>
 
+    <div id="error-message" class="error" style="display: none;"></div>
+
     <script type="text/javascript">
+        const errorMessageDiv = document.getElementById("error-message");
+
         document.getElementById('log-in-form').addEventListener('submit', function(event) {
             event.preventDefault(); // Prevent the default form submission
 
@@ -42,11 +46,15 @@
                 if (data.status === 'success') {
                     window.location.href = '/items'; // Redirect on success
                 } else {
-                    alert('Error: ' + data.message);
+<!--                    alert('Error: ' + data.message);-->
+                    errorMessageDiv.textContent = data.message;
+                    errorMessageDiv.style.display = "block";
                 }
             })
             .catch(error => {
                 console.error('Error:', error);
+                errorMessageDiv.textContent = "An unexpected error occurred.";
+                errorMessageDiv.style.display = "block";
             });
         });
     </script>
