@@ -3,6 +3,7 @@ package features
 import org.scalatestplus.selenium._
 import org.openqa.selenium.{By, WebDriver}
 import org.openqa.selenium.chrome.ChromeDriver
+import org.openqa.selenium.support.ui.{ExpectedConditions, WebDriverWait}
 import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach}
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
@@ -10,7 +11,7 @@ import org.scalatest.matchers.should.Matchers
 import java.time.Duration
 
 
-class LogInSpec extends AnyFlatSpec with Matchers with BeforeAndAfterAll with BeforeAndAfterEach{
+class LogInSpec extends AnyFlatSpec with Matchers with BeforeAndAfterAll with BeforeAndAfterEach {
 
   System.setProperty("webdriver.chrome.driver", "/usr/local/bin/chromedriver")
   val driver: WebDriver = new ChromeDriver()
@@ -29,7 +30,7 @@ class LogInSpec extends AnyFlatSpec with Matchers with BeforeAndAfterAll with Be
   }
 
   "Log In page" should "display a Log In form" in {
-//    driver.get("http://localhost:9000/login")
+    //    driver.get("http://localhost:9000/login")
 
     val heading = driver.findElement(By.tagName("h1")).getText
     val h2 = driver.findElement(By.tagName("h2")).getText
@@ -41,6 +42,8 @@ class LogInSpec extends AnyFlatSpec with Matchers with BeforeAndAfterAll with Be
   }
 
   "Logging in" should "redirect to the items page" in {
+    val wait = new WebDriverWait(driver, Duration.ofMillis(100))
+
     val usernameInput = driver.findElement(By.id("username"))
     val passwordInput = driver.findElement(By.id("password"))
     val submitButton = driver.findElement(By.id("login-button"))
@@ -48,6 +51,9 @@ class LogInSpec extends AnyFlatSpec with Matchers with BeforeAndAfterAll with Be
     usernameInput.sendKeys("testuser")
     passwordInput.sendKeys("Password1")
     submitButton.click()
+
+    wait.until(ExpectedConditions.urlToBe("http://localhost:9000/items")) // Adjust the URL as needed
+    wait.until(ExpectedConditions.visibilityOfElementLocated(By.tagName("h2")))
 
     val itemsPageH2 = driver.findElement(By.tagName("h2")).getText
 

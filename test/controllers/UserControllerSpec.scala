@@ -200,7 +200,8 @@ class UserControllerSpec extends PlaySpec with GuiceOneAppPerSuite with Injectin
 
       val request = FakeRequest(GET, "/login").withCSRFToken
 
-      val result = call(userController.showLogInForm, request)
+//      val result = call(userController.showLogInForm, request)
+      val result = userController.showLogInForm()(request)
       status(result) mustBe OK
       contentAsString(result) must include("name=\"csrfToken\"")
     }
