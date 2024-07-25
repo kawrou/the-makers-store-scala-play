@@ -24,12 +24,17 @@ class UserController @Inject()(cc: ControllerComponents, userDAO: UserDAO)(impli
       "email" -> email,
       "password" -> nonEmptyText(minLength = 8).verifying(
         pattern(passwordRegex, error = "Password must contain at least one letter and one number"
-      ))
+        ))
     )(User.apply)(User.unapply)
   )
 
   def showSignUpForm: Action[AnyContent] = Action { implicit request: Request[AnyContent] =>
-    Ok(views.html.signup(""))
+    request.session.get("username") match {
+      case Some(_) =>
+        Redirect("/")
+      case None =>
+        Ok(views.html.signup(""))
+    }
   }
 
   def signUp: Action[JsValue] = Action.async(parse.json) { implicit request =>
@@ -63,9 +68,13 @@ class UserController @Inject()(cc: ControllerComponents, userDAO: UserDAO)(impli
   }
 
   //Need to test with E2E testing
-  def showLogInForm(error: String = ""): Action[AnyContent] = Action{ implicit request: Request[AnyContent] =>
-//    val errorMessage = error.getOrElse("")
-    Ok(views.html.login("", error))
+  def showLogInForm(error: String = ""): Action[AnyContent] = Action { implicit request: Request[AnyContent] =>
+    request.session.get("username") match {
+      case Some(_) =>
+        Redirect("/")
+      case None =>
+        Ok(views.html.login("", error))
+    }
   }
 
   //Need to return with sessions
