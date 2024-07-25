@@ -23,4 +23,12 @@ class ItemDAO @Inject()(dbConfigProvider: DatabaseConfigProvider)(implicit ec: E
   def findItemByName(itemName: String): Future[Option[Item]] = {
     db.run(items.filter(_.name === itemName).result.headOption)
   }
+
+  def findItemById(itemId: Long): Future[Option[Item]] = {
+    db.run(items.filter(_.id === itemId).result.headOption)
+  }
+
+  def deleteItem(itemId: Long): Future[Int] ={
+    db.run(items.filter(_.id === itemId).delete)
+  }
 }

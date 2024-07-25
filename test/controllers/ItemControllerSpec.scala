@@ -2,11 +2,13 @@ package controllers
 
 import daos.ItemDAO
 import models.Items
-
 import org.scalatest.BeforeAndAfterEach
 import org.scalatestplus.play._
 import org.scalatestplus.play.guice._
+import play.api.Application
 import play.api.Play.materializer
+import play.api.db.evolutions.Evolutions
+import play.api.db.{DBApi, Database}
 import play.api.db.slick.DatabaseConfigProvider
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.libs.json.Json
@@ -20,7 +22,19 @@ import slick.lifted.TableQuery
 import scala.concurrent.ExecutionContext
 
 class ItemControllerSpec extends PlaySpec with GuiceOneAppPerSuite with Injecting with BeforeAndAfterEach {
+  def fakeApp(): Application = new GuiceApplicationBuilder().build()
 
+  lazy val database: Database = fakeApp().injector.instanceOf[DBApi].database("default")
+
+  override def beforeEach(): Unit = {
+    //      Evolutions.cleanupEvolutions(database)
+    Evolutions.applyEvolutions(database)
+  }
+
+  override def afterEach(): Unit = {
+    Evolutions.cleanupEvolutions(database)
+    // can put cleanup in here instead but kept in beforeEach so table structure is kept in db
+  }
 
   "ItemController POST / addItem" should {
     "return success" when {
@@ -46,6 +60,24 @@ class ItemControllerSpec extends PlaySpec with GuiceOneAppPerSuite with Injectin
         val maybeItem = await(itemDAO.findItemByName("testItem"))
         maybeItem must not be empty
         maybeItem.get.price mustBe 10.00
+      }
+    }
+  }
+
+  "ItemsController DElETE / deleteItem" should {
+    "return success" when {
+      "deleting an item" in {
+        val itemDAO = inject[ItemDAO]
+        val itemsController = new ItemsController(stubControllerComponents(), itemDAO)(inject[ExecutionContext])
+
+        val request = FakeRequest(DELETE, "/items/1").withCSRFToken
+
+        val result = call(itemsController.deleteItem(1), request)
+
+        status(result) mustBe OK
+        val jsonResponse = contentAsJson(result)
+        (jsonResponse \ "status").as[String] mustBe "success"
+        (jsonResponse \ "message").as[String] must include("Item with id: 1 deleted")
       }
     }
   }

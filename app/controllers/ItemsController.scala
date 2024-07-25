@@ -26,4 +26,16 @@ class ItemsController @Inject()(cc: ControllerComponents, itemDAO: ItemDAO)(impl
       Created(Json.obj("status" -> "success", "message" -> s"Item $id: $name created"))
     }
   }
+
+  def deleteItem(id: Long): Action[AnyContent] = Action.async { implicit request =>
+    //    val json = request.body.as[JsObject]
+    //    val id = (json \ "item-id").as[Long]
+
+    itemDAO.deleteItem(id).map {
+      case i if i == 1 => Ok(Json.obj("status" -> "success", "message" -> s"Item with id: $id deleted"))
+      case 0 => NotFound(Json.obj("status" -> "error", "message" -> s"Item with id: $id not found"))
+    }.recover {
+      case _: Exception => InternalServerError(Json.obj("status" -> "error", "message" -> "Error occurred. Item couldn't be deleted"))
+    }
+  }
 }
