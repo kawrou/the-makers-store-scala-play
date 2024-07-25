@@ -90,6 +90,8 @@ class UserController @Inject()(cc: ControllerComponents, userDAO: UserDAO)(impli
   }
 }
 
+
+
 //When dealing with asynchronous code, a future value will eventually hold either Some(user) or None.
 //The 'map' method on a 'Future' is used to transform the result of the 'Future' when it completes successfully.
 //However, 'map' doesn't handle nested Futures properly which can lead to Future[Future[Result]] rather than
