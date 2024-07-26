@@ -176,4 +176,33 @@ class ItemControllerSpec extends PlaySpec with GuiceOneAppPerSuite with Injectin
       }
     }
   }
+
+  "ItemsController GET / show" should {
+    "return OK and a view" when {
+      "finding an item that exists in the database" in {
+        val itemDAO = inject[ItemDAO]
+        val itemsController = new ItemsController(stubControllerComponents(), itemDAO)(inject[ExecutionContext])
+
+        val request = FakeRequest(GET, "/items/1")
+
+        val result = call(itemsController.show(1), request)
+
+        status(result) mustBe OK
+      }
+    }
+    "return NotFound" when {
+      "item doesn't exist in the database" in {
+        val itemDAO = inject[ItemDAO]
+        val itemsController = new ItemsController(stubControllerComponents(), itemDAO)(inject[ExecutionContext])
+
+        val request = FakeRequest(GET, "/items/2")
+
+        val result = call(itemsController.show(2), request)
+
+        status(result) mustBe NOT_FOUND
+      }
+    }
+  }
 }
+
+
