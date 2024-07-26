@@ -6,7 +6,7 @@ import play.api.libs.json._
 import play.api.mvc.{AbstractController, Action, AnyContent, ControllerComponents, Request}
 
 import javax.inject.Inject
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ExecutionContext, Future}
 
 class ItemsController @Inject()(cc: ControllerComponents, itemDAO: ItemDAO)(implicit ec: ExecutionContext) extends AbstractController(cc) {
 
@@ -14,8 +14,7 @@ class ItemsController @Inject()(cc: ControllerComponents, itemDAO: ItemDAO)(impl
     Ok(views.html.items())
   }
 
-  def addItem: Action[JsValue] = Action.async(parse.json) { implicit request =>
-
+  def create: Action[JsValue] = Action.async(parse.json) { implicit request =>
     val json = request.body.as[JsObject]
     val name = (json \ "item-name").as[String]
     val price = (json \ "item-price").as[Double]
@@ -27,7 +26,26 @@ class ItemsController @Inject()(cc: ControllerComponents, itemDAO: ItemDAO)(impl
     }
   }
 
-  def deleteItem(id: Long): Action[AnyContent] = Action.async { implicit request =>
+  //I need to find the original item with the same Id to check if it exists.
+  //If it does exist, I want to merge the update object with the DB object and create a new Item object
+  //Then update the DB item by ID using the new Item object
+
+  def update(id: Long): Action[JsValue] = Action.async(parse.json) { implicit request =>
+    val updateData = request.body.as[JsObject]
+
+    itemDAO.findItemById(id).flatMap {
+      case Some(item) =>
+        val updatedItemObj = (Json.toJson(item).as[JsObject] ++ updateData).as[Item]
+        itemDAO.updateItemById(id, updatedItemObj).map {
+          rows => Ok(Json.obj("status" -> "success", "message" -> s"Item with id: $id updated"))
+        }
+      case None => Future.successful(NotFound(Json.obj("status" -> "error", "message" -> s"Item with id: $id not found")))
+    }.recover {
+      case _ => InternalServerError(Json.obj("status" -> "error", "message" -> "Error updating item"))
+    }
+  }
+
+  def destroy(id: Long): Action[AnyContent] = Action.async { implicit request =>
     //    val json = request.body.as[JsObject]
     //    val id = (json \ "item-id").as[Long]
 

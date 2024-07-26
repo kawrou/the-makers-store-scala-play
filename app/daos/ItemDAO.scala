@@ -1,6 +1,6 @@
 package daos
 
-import models.{Item, Items, User, Users}
+import models.{Item, Items}
 import org.mindrot.jbcrypt.BCrypt
 import play.api.db.slick.DatabaseConfigProvider
 import slick.jdbc.JdbcProfile
@@ -9,8 +9,9 @@ import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
-class ItemDAO @Inject()(dbConfigProvider: DatabaseConfigProvider)(implicit ec: ExecutionContext){
+class ItemDAO @Inject()(dbConfigProvider: DatabaseConfigProvider)(implicit ec: ExecutionContext) {
   private val dbConfig = dbConfigProvider.get[JdbcProfile]
+
   import dbConfig._
   import profile.api._
 
@@ -28,7 +29,13 @@ class ItemDAO @Inject()(dbConfigProvider: DatabaseConfigProvider)(implicit ec: E
     db.run(items.filter(_.id === itemId).result.headOption)
   }
 
-  def deleteItem(itemId: Long): Future[Int] ={
+  def updateItemById(itemId: Long, item: Item): Future[Int] = {
+    db.run(items.filter(_.id === itemId).update(item))
+  }
+
+  def deleteItem(itemId: Long): Future[Int] = {
     db.run(items.filter(_.id === itemId).delete)
   }
+
+
 }

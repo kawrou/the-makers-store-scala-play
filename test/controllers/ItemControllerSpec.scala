@@ -36,7 +36,7 @@ class ItemControllerSpec extends PlaySpec with GuiceOneAppPerSuite with Injectin
     // can put cleanup in here instead but kept in beforeEach so table structure is kept in db
   }
 
-  "ItemController POST / addItem" should {
+  "ItemController POST / create" should {
     "return success" when {
       "creating a new item" in {
         val itemDAO = inject[ItemDAO]
@@ -50,7 +50,7 @@ class ItemControllerSpec extends PlaySpec with GuiceOneAppPerSuite with Injectin
           )
           .withCSRFToken
 
-        val result = call(itemsController.addItem, request)
+        val result = call(itemsController.create, request)
 
         status(result) mustBe CREATED
         val jsonResponse = contentAsJson(result)
@@ -64,7 +64,7 @@ class ItemControllerSpec extends PlaySpec with GuiceOneAppPerSuite with Injectin
     }
   }
 
-  "ItemsController DElETE / deleteItem" should {
+  "ItemsController DElETE / destroy" should {
     "return success" when {
       "deleting an item" in {
         val itemDAO = inject[ItemDAO]
@@ -72,12 +72,39 @@ class ItemControllerSpec extends PlaySpec with GuiceOneAppPerSuite with Injectin
 
         val request = FakeRequest(DELETE, "/items/1").withCSRFToken
 
-        val result = call(itemsController.deleteItem(1), request)
+        val result = call(itemsController.destroy(1), request)
 
         status(result) mustBe OK
         val jsonResponse = contentAsJson(result)
         (jsonResponse \ "status").as[String] mustBe "success"
         (jsonResponse \ "message").as[String] must include("Item with id: 1 deleted")
+      }
+    }
+  }
+
+  "ItemsController PATCH / updateItem" should {
+    "return success" when {
+      "updating an item" in {
+        val itemDAO = inject[ItemDAO]
+        val itemsController = new ItemsController(stubControllerComponents(), itemDAO)(inject[ExecutionContext])
+
+        val request = FakeRequest(PATCH, "/items/1")
+          .withJsonBody(Json.obj(
+          "name" -> "Makers T-shirt",
+          "price" -> 15.00,
+          "description" -> "A lovely T-shirt from Makers")
+        ).withCSRFToken
+
+        val result = call(itemsController.update(1), request)
+
+        status(result) mustBe OK
+        val jsonResponse = contentAsJson(result)
+        (jsonResponse \ "status").as[String] mustBe "success"
+        (jsonResponse \ "message").as[String] must include("Item with id: 1 updated")
+
+        val maybeItem = await(itemDAO.findItemByName("Makers T-shirt"))
+        maybeItem must not be empty
+        maybeItem.get.price mustBe 15.00
       }
     }
   }
