@@ -38,59 +38,40 @@ class ItemsController @Inject()(cc: ControllerComponents, itemDAO: ItemDAO)(impl
     }
   }
 
-  //I need to find the original item with the same Id to check if it exists.
-  //If it does exist, I want to merge the update object with the DB object and create a new Item object
-  //Then update the DB item by ID using the new Item object
-
   def update(id: Long): Action[JsValue] = Action.async(parse.json) { implicit request =>
 
-    val updateData = request.body.as[JsObject]
+    def findItem(id: Long) = {
+      itemDAO.findItemById(id)
+    }
+
+    def updateItem(id: Long, existingItem: Item, itemWithNewData: Item) = {
+      val updatedItemObj = mergeItem(existingItem, itemWithNewData)
+      itemDAO.updateItemById(id, updatedItemObj).map {
+        rows => Ok(Json.obj("status" -> "success", "message" -> s"Item with id: $id updated with. $rows updated"))
+      }
+    }
+
+    def mergeItem(existingItem: Item, updateItemObj: Item) = {
+      existingItem.copy(
+        name = updateItemObj.name,
+        price = updateItemObj.price,
+        description = updateItemObj.description
+      )
+    }
+
     itemUpdateForm.bindFromRequest().fold(
       formWithErrors => {
-        Future.successful(BadRequest(Json.obj("status" -> "error", "message" -> "Missing Item data")))
+        Future.successful(BadRequest(Json.obj("status" -> "error", "message" -> s"Missing Item data. $formWithErrors")))
       },
-      itemWithData => {
-        itemDAO.findItemById(id).flatMap {
-          case Some(item) =>
-            val updatedItemObj = (Json.toJson(item).as[JsObject] ++ updateData).as[Item]
-            itemDAO.updateItemById(id, updatedItemObj).map {
-              rows => Ok(Json.obj("status" -> "success", "message" -> s"Item with id: $id updated with $itemWithData. $rows updated"))
-            }.recover {
-              case e: Exception => InternalServerError(Json.obj("status" -> "error", "message" -> s"Error updating item: $e"))
-            }
+      itemWithNewData => {
+        findItem(id).flatMap {
+          case Some(existingItem) => updateItem(id, existingItem, itemWithNewData)
           case None => Future.successful(NotFound(Json.obj("status" -> "error", "message" -> s"Item with id: $id not found")))
         }.recover {
-          case e: Exception => InternalServerError(Json.obj("status" -> "error", "message" -> s"Can't find item: $e"))
+          case e: Exception => InternalServerError(Json.obj("status" -> "error", "message" -> s"Error"))
         }
       }
     )
-
-    //    val updateData = request.body.as[Item]
-    //    itemUpdateForm.bindFromRequest()
-    //      .fold(
-    //        formWithErrors => {
-    //          Future.successful(BadRequest(Json.obj("status" -> "error", "message" -> "Missing Item data")))
-    //        },
-    //        itemWithData => {
-    //          itemDAO.updateItemById(id, itemWithData).map {
-    //            rows => Ok(Json.obj("status" -> "success", "message" -> s"Item with id: $id updated. $rows updated"))
-    //          }.recover {
-    //            case _ => InternalServerError(Json.obj("status" -> "error", "message" -> "Error updating item"))
-    //          }
-    //        }
-    //      )
-
-    //        val updateData = request.body.as[JsObject]
-    //        itemDAO.findItemById(id).flatMap {
-    //          case Some(item) =>
-    //            val updatedItemObj = (Json.toJson(item).as[JsObject] ++ updateData).as[Item]
-    //            itemDAO.updateItemById(id, updatedItemObj).map {
-    //              rows => Ok(Json.obj("status" -> "success", "message" -> s"Item with id: $id updated"))
-    //            }
-    //          case None => Future.successful(NotFound(Json.obj("status" -> "error", "message" -> s"Item with id: $id not found")))
-    //        }.recover {
-    //          case _ => InternalServerError(Json.obj("status" -> "error", "message" -> "Error updating item"))
-    //        }
   }
 
   def destroy(id: Long): Action[AnyContent] = Action.async { implicit request =>

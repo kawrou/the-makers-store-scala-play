@@ -84,16 +84,16 @@ class ItemControllerSpec extends PlaySpec with GuiceOneAppPerSuite with Injectin
 
   "ItemsController PATCH / updateItem" should {
     "return success" when {
-      "updating an item" in {
+      "updating an item with valid form data" in {
         val itemDAO = inject[ItemDAO]
         val itemsController = new ItemsController(stubControllerComponents(), itemDAO)(inject[ExecutionContext])
 
         val request = FakeRequest(PATCH, "/items/1")
           .withJsonBody(Json.obj(
-          "name" -> "Makers T-shirt",
-          "price" -> 15.00,
-          "description" -> "A lovely T-shirt from Makers")
-        ).withCSRFToken
+            "name" -> "Makers T-shirt",
+            "price" -> 15.00,
+            "description" -> "A lovely T-shirt from Makers")
+          ).withCSRFToken
 
         val result = call(itemsController.update(1), request)
 
@@ -106,6 +106,49 @@ class ItemControllerSpec extends PlaySpec with GuiceOneAppPerSuite with Injectin
         maybeItem must not be empty
         maybeItem.get.price mustBe 15.00
       }
+    }
+
+    "return 404 Not Found if item doesn't exist in database" in {
+      val itemDAO = inject[ItemDAO]
+      val itemsController = new ItemsController(stubControllerComponents(), itemDAO)(inject[ExecutionContext])
+
+      val wrongId = 2
+
+      val request = FakeRequest(PATCH, s"/items/$wrongId")
+        .withJsonBody(Json.obj(
+          "name" -> "Makers T-shirt",
+          "price" -> 15.00,
+          "description" -> "A lovely T-shirt from Makers")
+        ).withCSRFToken
+
+      val result = call(itemsController.update(wrongId), request)
+
+      status(result) mustBe NOT_FOUND
+      val jsonResponse = contentAsJson(result)
+      (jsonResponse \ "status").as[String] mustBe "error"
+      (jsonResponse \ "message").as[String] must include("Item with id: 2 not found")
+    }
+
+    "return 400 BadRequest when sending bad data" in {
+      val itemDAO = inject[ItemDAO]
+      val itemsController = new ItemsController(stubControllerComponents(), itemDAO)(inject[ExecutionContext])
+
+      val id = 1
+
+      val request = FakeRequest(PATCH, s"/items/$id")
+        .withJsonBody(Json.obj(
+          "name" -> "some name",
+          "price" -> "one",
+          "description" -> "some description")
+        ).withCSRFToken
+
+      val result = call(itemsController.update(id), request)
+
+      status(result) mustBe BAD_REQUEST
+      val jsonResponse = contentAsJson(result)
+      println(jsonResponse)
+      (jsonResponse \ "status").as[String] mustBe "error"
+      (jsonResponse \ "message").as[String] must include("Missing Item data.")
     }
   }
 }
