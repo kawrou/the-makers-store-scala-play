@@ -29,16 +29,34 @@ class ItemsController @Inject()(cc: ControllerComponents, itemDAO: ItemDAO)(impl
   def create: Action[JsValue] = Action.async(parse.json) { implicit request =>
     itemForm.bindFromRequest().fold(
       formWithErrors => {
-        Future.successful(BadRequest(Json.obj("status" -> "error", "message" -> s"Missing Item data. $formWithErrors")))
+        Future.successful(BadRequest(Json.obj(
+          "status" -> "error",
+          "message" -> s"Missing Item data. ${formWithErrors.errors.mkString(", ")}"
+        )))
       },
       formWithData => {
         itemDAO.addItem(formWithData).map { id =>
-          Created(Json.obj("status" -> "success", "message" -> s"Item $id: ${formWithData.name} created"))
+          Created(Json.obj(
+            "status" -> "success",
+            "message" -> s"Item $id: ${formWithData.name} created"
+          ))
         }.recover {
-          case _: Exception => InternalServerError(Json.obj("status" -> "error", "message" -> s"Error occurred."))
+          case _: Exception => InternalServerError(Json.obj(
+            "status" -> "error",
+            "message" -> s"Error occurred while creating item."
+          ))
         }
       }
     )
+  }
+
+  def show(id: Long): Action[AnyContent] = Action.async { implicit request: Request[AnyContent] =>
+    itemDAO.findItemById(id).map {
+      case Some(item) => Ok(views.html.item(item))
+      case None => NotFound(Json.obj("status" -> "error", "message" -> s"Item $id not found"))
+    }.recover{
+      case _: Exception => InternalServerError(Json.obj("status" -> "error", "message" -> "Error occurred while retrieving item"))
+    }
   }
 
   def update(id: Long): Action[JsValue] = Action.async(parse.json) { implicit request =>
@@ -50,7 +68,11 @@ class ItemsController @Inject()(cc: ControllerComponents, itemDAO: ItemDAO)(impl
     def updateItem(id: Long, existingItem: Item, itemWithNewData: Item) = {
       val updatedItemObj = mergeItem(existingItem, itemWithNewData)
       itemDAO.updateItemById(id, updatedItemObj).map {
-        rows => Ok(Json.obj("status" -> "success", "message" -> s"Item with id: $id updated with. $rows updated"))
+        rows =>
+          Ok(Json.obj(
+            "status" -> "success",
+            "message" -> s"Item with id: $id updated with. $rows updated"
+          ))
       }
     }
 
@@ -64,28 +86,38 @@ class ItemsController @Inject()(cc: ControllerComponents, itemDAO: ItemDAO)(impl
 
     itemForm.bindFromRequest().fold(
       formWithErrors => {
-        Future.successful(BadRequest(Json.obj("status" -> "error", "message" -> s"Missing Item data. $formWithErrors")))
+        Future.successful(BadRequest(Json.obj(
+          "status" -> "error",
+          "message" -> s"Missing Item data. $formWithErrors"
+        )))
       },
       itemWithNewData => {
         findItem(id).flatMap {
           case Some(existingItem) => updateItem(id, existingItem, itemWithNewData)
-          case None => Future.successful(NotFound(Json.obj("status" -> "error", "message" -> s"Item with id: $id not found")))
+          case None => Future.successful(NotFound(Json.obj(
+            "status" -> "error",
+            "message" -> s"Item with id: $id not found"
+          )))
         }.recover {
-          case e: Exception => InternalServerError(Json.obj("status" -> "error", "message" -> s"Error"))
+          case e: Exception => InternalServerError(Json.obj(
+            "status" -> "error",
+            "message" -> s"Error"
+          ))
         }
       }
     )
   }
 
   def destroy(id: Long): Action[AnyContent] = Action.async { implicit request =>
-    //    val json = request.body.as[JsObject]
-    //    val id = (json \ "item-id").as[Long]
 
     itemDAO.deleteItem(id).map {
       case i if i == 1 => Ok(Json.obj("status" -> "success", "message" -> s"Item with id: $id deleted"))
       case 0 => NotFound(Json.obj("status" -> "error", "message" -> s"Item with id: $id not found"))
     }.recover {
-      case _: Exception => InternalServerError(Json.obj("status" -> "error", "message" -> "Error occurred. Item couldn't be deleted"))
+      case _: Exception => InternalServerError(Json.obj(
+        "status" -> "error",
+        "message" -> "Error occurred. Item couldn't be deleted"
+      ))
     }
   }
 }
