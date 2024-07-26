@@ -62,6 +62,25 @@ class ItemControllerSpec extends PlaySpec with GuiceOneAppPerSuite with Injectin
         maybeItem.get.price mustBe 10.00
       }
     }
+    "return 400 BadRequest when sending bad data" in {
+      val itemDAO = inject[ItemDAO]
+      val itemsController = new ItemsController(stubControllerComponents(), itemDAO)(inject[ExecutionContext])
+
+      val request = FakeRequest(POST, "/items/")
+        .withJsonBody(Json.obj(
+          "name" -> "",
+          "price" -> 15.00,
+          "description" -> "")
+        ).withCSRFToken
+
+      val result = call(itemsController.create, request)
+
+      status(result) mustBe BAD_REQUEST
+      val jsonResponse = contentAsJson(result)
+      println(jsonResponse)
+      (jsonResponse \ "status").as[String] mustBe "error"
+      (jsonResponse \ "message").as[String] must include("Missing Item data.")
+    }
   }
 
   "ItemsController DElETE / destroy" should {

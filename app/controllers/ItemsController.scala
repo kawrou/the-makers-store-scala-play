@@ -13,7 +13,7 @@ import scala.concurrent.{ExecutionContext, Future}
 
 class ItemsController @Inject()(cc: ControllerComponents, itemDAO: ItemDAO)(implicit ec: ExecutionContext) extends AbstractController(cc) {
 
-  private val itemUpdateForm: Form[Item] = Form(
+  private val itemForm: Form[Item] = Form(
     mapping(
       "id" -> optional(longNumber),
       "name" -> nonEmptyText,
@@ -27,15 +27,18 @@ class ItemsController @Inject()(cc: ControllerComponents, itemDAO: ItemDAO)(impl
   }
 
   def create: Action[JsValue] = Action.async(parse.json) { implicit request =>
-    val json = request.body.as[JsObject]
-    val name = (json \ "item-name").as[String]
-    val price = (json \ "item-price").as[Double]
-    val description = (json \ "item-description").as[String]
-
-    val item = Item(None, name, price, description)
-    itemDAO.addItem(item).map { id =>
-      Created(Json.obj("status" -> "success", "message" -> s"Item $id: $name created"))
-    }
+    itemForm.bindFromRequest().fold(
+      formWithErrors => {
+        Future.successful(BadRequest(Json.obj("status" -> "error", "message" -> s"Missing Item data. $formWithErrors")))
+      },
+      formWithData => {
+        itemDAO.addItem(formWithData).map { id =>
+          Created(Json.obj("status" -> "success", "message" -> s"Item $id: ${formWithData.name} created"))
+        }.recover {
+          case _: Exception => InternalServerError(Json.obj("status" -> "error", "message" -> s"Error occurred."))
+        }
+      }
+    )
   }
 
   def update(id: Long): Action[JsValue] = Action.async(parse.json) { implicit request =>
@@ -59,7 +62,7 @@ class ItemsController @Inject()(cc: ControllerComponents, itemDAO: ItemDAO)(impl
       )
     }
 
-    itemUpdateForm.bindFromRequest().fold(
+    itemForm.bindFromRequest().fold(
       formWithErrors => {
         Future.successful(BadRequest(Json.obj("status" -> "error", "message" -> s"Missing Item data. $formWithErrors")))
       },

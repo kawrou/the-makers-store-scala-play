@@ -36,6 +36,4 @@ class ItemDAO @Inject()(dbConfigProvider: DatabaseConfigProvider)(implicit ec: E
   def deleteItem(itemId: Long): Future[Int] = {
     db.run(items.filter(_.id === itemId).delete)
   }
-
-
 }
